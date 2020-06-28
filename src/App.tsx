@@ -1,26 +1,48 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import { ControlBar } from './ControlBar';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+export interface AppState {
+  backgroundColor: string;
+  pickColor: boolean;
+  lockMonitor: boolean;
 }
 
-export default App;
+export const App = () => { 
+  const [appState, setAppState] = useState({
+    backgroundColor: '#FFFFFF',
+    pickColor: false,
+    lockMonitor: false
+  });
+  const [isFullScreen, setIsFullScreen] =  useState(!!document.fullscreenElement);
+  const channel: BroadcastChannel = new BroadcastChannel('lightscreen');
+  
+  useEffect(() => {
+    channel.postMessage({ instruction: "getState" });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => { 
+      if (e.data.instruction === "getState") {
+        channel.postMessage({ instruction: "setState", state: appState });
+      } else if (e.data.instruction === "setState") {
+        document.querySelector("body")!.style.backgroundColor = e.data.state.backgroundColor;
+        setAppState(prevState => { return { ...prevState, ...e.data.state} });
+        channel.removeEventListener('message', handleMessage);
+      }
+    }
+
+    channel.addEventListener('message', handleMessage);
+    return () => {
+      channel.removeEventListener('message', handleMessage);
+    }
+  }, [appState, channel]);
+
+  return <ControlBar
+    appState={appState}
+    setAppState={setAppState}
+    isFullScreen={isFullScreen}
+    setIsFullScreen={setIsFullScreen}
+    channel={channel}
+  />
+};

@@ -1,0 +1,33 @@
+name: Deploy CI
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12.x"
+      - name: Install Packages
+        run: npm ci
+      - name: Build Static Pages
+        run: | 
+          npm run deploy
+          mkdir deploy
+          mv ./build ./lightscreen
+          mv ./lightscreen ./deploy 
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          personal_token: ${{ secrets.TOKEN }}
+          external_repository: akgupta89/akgupta89.github.io
+          publish_dir: ./deploy
+          publish_branch: master
+          keep_files: true
